@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0e2a24">
+<title>BUD Clock</title>
+<style>
+  :root {
+    --bg: #0e2a24;
+    --card: #163832;
+    --ink: #f4f7f4;
+    --muted: #b7c9c2;
+    --line: #2a564c;
+    --accent: #7dcea0;
+    --accent-ink: #0e2a24;
+    --warn: #f0d48a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    min-height: 100vh;
+    padding: 20px 16px 40px;
+  }
+  main { max-width: 520px; margin: 0 auto; }
+  h1 { font-size: 1.35rem; margin: 0 0 4px; letter-spacing: -0.02em; }
+  .sub { color: var(--muted); font-size: 0.92rem; margin: 0 0 16px; }
+  .clock {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 16px 18px;
+    margin-bottom: 14px;
+  }
+  .label { color: var(--muted); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; }
+  .time { font-variant-numeric: tabular-nums; font-size: 2.4rem; font-weight: 650; margin: 4px 0 2px; }
+  .date { font-size: 1.05rem; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 14px;
+  }
+  .row { display: flex; gap: 10px; }
+  label { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 6px; }
+  input {
+    width: 100%;
+    font-size: 1.35rem;
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    background: #0e2a24;
+    color: var(--ink);
+  }
+  .presets { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  button {
+    border: 0;
+    border-radius: 999px;
+    padding: 10px 14px;
+    font-size: 0.95rem;
+    background: #24574c;
+    color: var(--ink);
+  }
+  button.primary {
+    background: var(--accent);
+    color: var(--accent-ink);
+    font-weight: 650;
+    width: 100%;
+    margin-top: 12px;
+    border-radius: 12px;
+    padding: 14px;
+    font-size: 1.05rem;
+  }
+  .result .time { color: var(--accent); }
+  .copy {
+    margin-top: 10px;
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--ink);
+  }
+  .note {
+    color: var(--warn);
+    font-size: 0.82rem;
+    line-height: 1.4;
+  }
+  .fine { color: var(--muted); font-size: 0.78rem; line-height: 1.4; }
+</style>
+</head>
+<body>
+<main>
+  <h1>BUD Clock</h1>
+  <p class="sub">Adds hours or days to the current date and time. 24-hour clock.</p>
+
+  <section class="clock">
+    <div class="label">Current date and time</div>
+    <div class="time" id="nowTime">--:--:--</div>
+    <div class="date" id="nowDate">—</div>
+  </section>
+
+  <section class="card">
+    <div class="row">
+      <div style="flex:1">
+        <label for="days">Days</label>
+        <input id="days" inputmode="numeric" value="0" autocomplete="off">
+      </div>
+      <div style="flex:1">
+        <label for="hours">Hours</label>
+        <input id="hours" inputmode="decimal" value="0" autocomplete="off">
+      </div>
+    </div>
+    <div class="presets" id="presets"></div>
+    <button class="primary" id="calc" type="button">Calculate BUD</button>
+  </section>
+
+  <section class="clock result">
+    <div class="label">Beyond-use date and time</div>
+    <div class="time" id="budTime">—</div>
+    <div class="date" id="budDate">Enter days or hours</div>
+    <button class="copy" id="copy" type="button">Copy result</button>
+  </section>
+
+  <p class="note">Date math only. Use the shorter of this result and the earliest component expiration. Follow your pharmacy SOP and current USP <795>/<797>. This page does not assign an official BUD.</p>
+  <p class="fine">Works offline after the page loads. On iPhone, open in Safari and use Share → Add to Home Screen.</p>
+</main>
+<script>
+const presets = [
+  ["12 h", 0, 12],
+  ["24 h", 0, 24],
+  ["48 h", 0, 48],
+  ["76 h", 0, 76],
+  ["7 days", 7, 0],
+  ["10 days", 10, 0],
+  ["14 days", 14, 0],
+  ["28 days", 28, 0],
+  ["30 days", 30, 0]
+];
+const pad = n => String(n).padStart(2, "0");
+const fmtTime = d => pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds());
+const fmtDate = d => d.toLocaleDateString(undefined, { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+
+function tick() {
+  const now = new Date();
+  document.getElementById("nowTime").textContent = fmtTime(now);
+  document.getElementById("nowDate").textContent = fmtDate(now);
+}
+tick();
+setInterval(tick, 1000);
+
+const box = document.getElementById("presets");
+presets.forEach(([label, days, hours]) => {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.textContent = label;
+  b.onclick = () => {
+    document.getElementById("days").value = days;
+    document.getElementById("hours").value = hours;
+    calculate();
+  };
+  box.appendChild(b);
+});
+
+let lastText = "";
+function calculate() {
+  const days = Number(document.getElementById("days").value) || 0;
+  const hours = Number(document.getElementById("hours").value) || 0;
+  const bud = new Date();
+  // Absolute elapsed time so DST transitions are included
+  bud.setTime(bud.getTime() + (days * 24 + hours) * 3600000);
+  document.getElementById("budTime").textContent = fmtTime(bud);
+  document.getElementById("budDate").textContent = fmtDate(bud);
+  lastText = fmtDate(bud) + " " + fmtTime(bud);
+}
+document.getElementById("calc").onclick = calculate;
+document.getElementById("days").addEventListener("input", calculate);
+document.getElementById("hours").addEventListener("input", calculate);
+document.getElementById("copy").onclick = async () => {
+  if (!lastText) calculate();
+  try {
+    await navigator.clipboard.writeText(lastText);
+    document.getElementById("copy").textContent = "Copied";
+    setTimeout(() => document.getElementById("copy").textContent = "Copy result", 1200);
+  } catch (e) {
+    document.getElementById("copy").textContent = lastText;
+  }
+};
+</script>
+</body>
+</html>
